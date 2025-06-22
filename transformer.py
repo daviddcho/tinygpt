@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -201,10 +202,10 @@ def train_model():
     # Initialize model
     model = Transformer(
         vocab_size=dataset.vocab_size,
-        d_model=512,
-        n_heads=8,
-        n_layers=8,
-        d_ff=2048,
+        d_model=768,
+        n_heads=12,
+        n_layers=12,
+        d_ff=3072,
         max_seq_len=256
     ).to(device)
     
@@ -302,16 +303,16 @@ def load_model_and_chat(model_path, max_length=200, temperature=0.8):
     vocab_size = checkpoint['vocab_size']
     char_to_idx = checkpoint['char_to_idx']
     idx_to_char = checkpoint['idx_to_char']
-    
+
     model = Transformer(
         vocab_size=vocab_size,
-        d_model=512,
-        n_heads=8,
-        n_layers=6,
-        d_ff=2048,
+        d_model=768,
+        n_heads=12,
+        n_layers=12,
+        d_ff=3072,
         max_seq_len=256
     ).to(device)
-    
+
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
