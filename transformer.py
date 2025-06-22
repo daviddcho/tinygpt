@@ -26,7 +26,9 @@ class MultiHeadAttention(nn.Module):
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
         
         if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
+            #scores = scores.masked_fill(mask == 0, -1e9)
+            #for mps autocasting to half precision
+            scores = scores.masked_fill(mask == 0, -1e4)
             
         attention_weights = F.softmax(scores, dim=-1)
         output = torch.matmul(attention_weights, v)
@@ -202,10 +204,10 @@ def train_model():
     # Initialize model
     model = Transformer(
         vocab_size=dataset.vocab_size,
-        d_model=768,
-        n_heads=12,
-        n_layers=12,
-        d_ff=3072,
+        d_model=512,
+        n_heads=8,
+        n_layers=6,
+        d_ff=2048,
         max_seq_len=256
     ).to(device)
     
@@ -226,8 +228,9 @@ def train_model():
         X_train, Y_train = X_train.to(device), Y_train.to(device)
         
         # Forward pass
-        logits = model(X_train)
-        loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
+        with torch.autocast(device_type=device.type, dtype=torch.float16):
+          logits = model(X_train)
+          loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
         
         # Backward pass
         optimizer.zero_grad()
