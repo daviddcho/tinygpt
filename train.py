@@ -166,90 +166,16 @@ def generate_sample(model, dataset, device, length=100, temperature=0.8):
         # Convert indices back to characters
         return ''.join([dataset.idx_to_char[idx] for idx in generated])
 
-def load_model_and_chat(model_path, max_length=200, temperature=0.8):
-    device = torch.device('cuda' if torch.cuda.is_available() else 
-                          'mps' if torch.mps.is_available() else 
-                          'cpu')
-    print(f"Loading model on {device}...")
-    
-    checkpoint = torch.load(model_path, map_location=device)
-    vocab_size = checkpoint['vocab_size']
-    char_to_idx = checkpoint['char_to_idx']
-    idx_to_char = checkpoint['idx_to_char']
-
-    model = Transformer(
-        vocab_size=vocab_size,
-        d_model=D_MODEL,
-        n_heads=N_HEADS,
-        n_layers=N_LAYERS,
-        d_ff=D_FF,
-        max_seq_len=MAX_SEQ_LEN
-    ).to(device)
-
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
-    
-    print("Model loaded successfully! Type 'quit' to exit.")
-    
-    while True:
-        user_input = input("\nYou: ").strip()
-        if user_input.lower() == 'quit':
-            break
-            
-        if not user_input:
-            continue
-            
-        try:
-            input_indices = [char_to_idx.get(ch, 0) for ch in user_input]
-            context = torch.tensor([input_indices], dtype=torch.long).to(device)
-            
-            generated_text = generate_text(model, context, idx_to_char, max_length, temperature)
-            print(f"Bot: {generated_text}")
-            
-        except Exception as e:
-            print(f"Error generating response: {e}")
-
-def generate_text(model, context, idx_to_char, max_length=200, temperature=0.8):
-    model.eval()
-    generated = []
-    
-    with torch.no_grad():
-        for _ in range(max_length):
-            if context.size(1) > model.max_seq_len:
-                context = context[:, -model.max_seq_len:]
-                
-            logits = model(context)
-            logits = logits[0, -1, :] / temperature
-            
-            probs = F.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, 1)
-            
-            next_char = idx_to_char.get(next_token.item(), '')
-            if next_char in ['\n', '.', '!', '?'] and len(generated) > 10:
-                generated.append(next_char)
-                break
-                
-            generated.append(next_char)
-            context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
-    
-    return ''.join(generated)
-
 if __name__ == "__main__":
-    import sys
+    print("Starting transformer training on enwik8...")
+    model, dataset = train_model()
     
-    if len(sys.argv) > 1 and sys.argv[1] == 'chat':
-        model_path = sys.argv[2] if len(sys.argv) > 2 else 'transformer_enwik8.pth'
-        load_model_and_chat(model_path)
-    else:
-        print("Starting transformer training on enwik8...")
-        model, dataset = train_model()
-        
-        # Save the model
-        torch.save({
-            'model_state_dict': model.state_dict(),
-            'vocab_size': dataset.vocab_size,
-            'char_to_idx': dataset.char_to_idx,
-            'idx_to_char': dataset.idx_to_char
-        }, 'transformer_enwik8.pth')
-        
-        print("Training completed! Model saved as 'transformer_enwik8.pth'")
+    # Save the model
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'vocab_size': dataset.vocab_size,
+        'char_to_idx': dataset.char_to_idx,
+        'idx_to_char': dataset.idx_to_char
+    }, 'transformer_enwik8.pth')
+    
+    print("Training completed! Model saved as 'transformer_enwik8.pth'")
