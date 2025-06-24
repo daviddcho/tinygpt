@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import wandb
 from model import Transformer
-
 from tqdm import trange
 import os
 import zipfile
@@ -59,11 +59,11 @@ D_MODEL = 768
 N_HEADS = 12
 N_LAYERS = 10
 D_FF = 2048
-MAX_SEQ_LEN = 256
+MAX_SEQ_LEN = 512
 BS = 8
 
 def train_model():
-    # Configuration
+    run = wandb.init(entity='davidcho', project='llm-wiki')
     device = torch.device('cuda' if torch.cuda.is_available() else 
                           'mps' if torch.backends.mps.is_available() else 
                           'cpu')
@@ -101,10 +101,12 @@ def train_model():
         # Forward pass
         logits = model(X_train)
         loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
+        accuracy = calculate_accuracy(logits, Y_train)
         
         # Backward pass
         optimizer.zero_grad()
         loss.backward()
+        run.log({'accuracy': accuracy, 'loss': loss.item()})
         
         # Gradient clipping
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -170,7 +172,6 @@ if __name__ == "__main__":
     print("Starting transformer training on enwik8...")
     model, dataset = train_model()
     
-    # Save the model
     torch.save({
         'model_state_dict': model.state_dict(),
         'vocab_size': dataset.vocab_size,
