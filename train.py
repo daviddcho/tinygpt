@@ -61,9 +61,18 @@ N_LAYERS = 10
 D_FF = 2048
 MAX_SEQ_LEN = 512
 BS = 8
+LR = 3e-4
 
 def train_model():
-    run = wandb.init(entity='davidcho', project='llm-wiki')
+    run = wandb.init(entity='davidcho', project='llm-wiki', config={
+        "d_model": D_MODEL,
+        "n_heads": N_HEADS,
+        "n_layers": N_LAYERS,
+        "d_ff": D_FF,
+        "max_seq_len": MAX_SEQ_LEN,
+        "bs": BS,
+        "learning_rate": LR,
+    })
     device = torch.device('cuda' if torch.cuda.is_available() else 
                           'mps' if torch.backends.mps.is_available() else 
                           'cpu')
@@ -83,7 +92,7 @@ def train_model():
     ).to(device)
     
     # Training setup
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.1)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.1)
     criterion = nn.CrossEntropyLoss()
     
     # Training parameters
