@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from model import Transformer
 
-def chat(model_path, max_length=200, temperature=0.8):
+def chat(model_path, max_length=200, temperature=0.3):
     device = torch.device('cuda' if torch.cuda.is_available() else 
                           'mps' if torch.mps.is_available() else 
                           'cpu')

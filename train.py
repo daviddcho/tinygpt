@@ -79,7 +79,7 @@ def train_model():
     print(f"Using device: {device}")
     
     # Load dataset
-    dataset = EnWik8Dataset('data/enwik8.zip', seq_len=256)
+    dataset = EnWik8Dataset('data/enwik8.zip', seq_len=MAX_SEQ_LEN)
     
     # Initialize model
     model = Transformer(
@@ -168,11 +168,15 @@ def generate_sample(model, dataset, device, length=100, temperature=0.8):
             logits = logits[0, -1, :] / temperature
             
             # Sample from the distribution
-            probs = F.softmax(logits, dim=-1)
-            next_char = torch.multinomial(probs, 1)
+            probs = F.softmax(logits / temperature, dim=-1)
+            # Top-k sampling 
+            top_k = 10
+            top_probs, top_indices = torch.topk(probs, top_k)
+            top_probs = top_probs / top_probs.sum()
+            next_token = top_indices[torch.multinomial(top_probs, 1)]
             
-            generated.append(next_char.item())
-            context = torch.cat([context, next_char.unsqueeze(0)], dim=1)
+            generated.append(next_token.item())
+            context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
         
         # Convert indices back to characters
         return ''.join([dataset.idx_to_char[idx] for idx in generated])
