@@ -55,6 +55,7 @@ class EnWik8Dataset:
         
         return torch.from_numpy(x).long(), torch.from_numpy(y).long()
 
+N_EPOCHS = 50000
 D_MODEL = 768
 N_HEADS = 12
 N_LAYERS = 10
@@ -96,13 +97,12 @@ def train_model():
     criterion = nn.CrossEntropyLoss()
     
     # Training parameters
-    max_iters = 20000
     eval_interval = 500
     batch_size = BS
     
     # Training loop
     model.train()
-    for iter_num in trange(max_iters, desc="Training"):
+    for iter_num in trange(N_EPOCHS, desc="Training"):
         # Get batch
         X_train, Y_train = dataset.get_batch('train', batch_size)
         X_train, Y_train = X_train.to(device), Y_train.to(device)
