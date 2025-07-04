@@ -119,7 +119,7 @@ def generate_sample(model, dataset, device, length=100, temperature=0.8):
         context = context[:, -model.max_seq_len:]
         
       logits = model(context)
-      logits = logits[0, -1, :] / temperature
+      logits = logits[0, -1, :]
       
       # Sample from the distribution
       probs = F.softmax(logits / temperature, dim=-1)
