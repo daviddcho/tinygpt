@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from model import Transformer
 
-def chat(model_path, max_length=200, temperature=0.3):
+def chat(model_path, max_length=200, temperature=0.5):
     device = torch.device('cuda' if torch.cuda.is_available() else 
                           'mps' if torch.mps.is_available() else 
                           'cpu')
@@ -82,5 +82,5 @@ def generate_text(model, context, idx_to_char, max_length=200, temperature=0.8):
 
 if __name__ == "__main__":
   import sys
-  model_path = sys.argv[2] if len(sys.argv) > 2 else 'transformer_enwik8.pth'
+  model_path = sys.argv[2] if len(sys.argv) > 2 else 'weights/transformer_enwik8.pth'
   chat(model_path)

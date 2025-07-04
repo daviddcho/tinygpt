@@ -190,6 +190,6 @@ if __name__ == "__main__":
         'vocab_size': dataset.vocab_size,
         'char_to_idx': dataset.char_to_idx,
         'idx_to_char': dataset.idx_to_char
-    }, 'transformer_enwik8.pth')
+    }, 'weights/transformer_enwik8.pth')
     
     print("Training completed! Model saved as 'transformer_enwik8.pth'")
