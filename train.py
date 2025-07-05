@@ -150,10 +150,13 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       # Sample from the distribution
       probs = F.softmax(logits / temperature, dim=-1)
       # Top-k sampling 
-      top_k = 10
-      top_probs, top_indices = torch.topk(probs, top_k)
-      top_probs = top_probs / top_probs.sum()
-      next_token = top_indices[torch.multinomial(top_probs, 1)]
+      # top_k = 10
+      # top_probs, top_indices = torch.topk(probs, top_k)
+      # top_probs = top_probs / top_probs.sum()
+      # next_token = top_indices[torch.multinomial(top_probs, 1)]
+      
+      # Regular sampling
+      next_token = torch.multinomial(probs, 1)
       
       generated.append(next_token.item())
       context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
