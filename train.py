@@ -35,9 +35,9 @@ D_FF = 512
 MAX_SEQ_LEN = 128
 
 BS = 12
-MAX_LR = 5e-5
+MAX_LR = 1e-4
 MIN_LR = MAX_LR * 0.1
-WARMUP_STEPS = 200
+WARMUP_STEPS = 500
 
 device = torch.device(
   'cuda' if torch.cuda.is_available() else 
@@ -86,7 +86,7 @@ def train_model():
     return MIN_LR + (MAX_LR - MIN_LR) * cosine_decay
 
   model.train()
-  for iter_num in trange(N_EPOCHS, desc="Training"):
+  for iter_num in (t := trange(N_EPOCHS)):
     X_train, Y_train = dataset.get_batch('train', batch_size)
     X_train, Y_train = X_train.to(device), Y_train.to(device)
     
@@ -102,11 +102,11 @@ def train_model():
 
     loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1)) + 0.01 * entropy
     accuracy = calculate_accuracy(logits, Y_train)
-    print("acc", accuracy)
     
     optimizer.zero_grad()
     loss.backward()
     run.log({'accuracy': accuracy, 'loss': loss.item(), 'lr': lr})
+    t.set_description("loss %.2f accuracy %.2f" % (loss.item(), accuracy))
     
     # gradient clipping
     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -129,14 +129,6 @@ def train_model():
         print(f"\nIter {iter_num}: Train Loss: {loss.item():.4f}, Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss.item():.4f}, Val Acc: {val_acc:.4f}")
         
-        # Debug model weights
-        print(f"Model vocab_size: {model.vocab_size}")
-        print(f"Embedding weight shape: {model.embedding.weight.shape}")
-        print(f"Embedding weight stats: mean={model.embedding.weight.mean():.3f}, std={model.embedding.weight.std():.3f}")
-        print(f"Output layer has bias: {model.head.bias is not None}")
-        if model.head.bias is not None:
-          print(f"Output bias for token 0: {model.head.bias[0].item():.3f}")
-        
         sample_text = generate_sample(model, dataset.vocab_size, device, length=100)
         print(f"Sample: {sample_text}")
         
@@ -147,8 +139,6 @@ def train_model():
 def calculate_accuracy(logits, targets):
   predictions = torch.argmax(logits, dim=-1)
   correct = (predictions == targets).float()
-  print("preds", predictions)
-  print("target", targets)
   return correct.mean().item()
 
 def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
@@ -167,28 +157,17 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       logits = model(context)
       logits = logits[0, -1, :]
       
-      # Debug logits before softmax
-      print(f"Raw logits stats: min={logits.min():.2f}, max={logits.max():.2f}, mean={logits.mean():.2f}")
-      print(f"Logit[0] (!) = {logits[0]:.2f}, Logit[1] = {logits[1]:.2f}, Logit[2] = {logits[2]:.2f}")
+      #print(logits.min(), logits.max(), logits.mean())
+      #print(logits[0], logits[1], logits[2])
       
       # Sample from the distribution
       probs = F.softmax(logits / temperature, dim=-1)
       
-      # Check if softmax is saturated
-      sorted_probs, sorted_indices = torch.sort(probs, descending=True)
-      print("Top 3 predictions:")
-      for i in range(3):
-        token = sorted_indices[i].item()
-        prob = sorted_probs[i].item()
-        print(f"  {repr(tokenizer.decode([token]))}: {prob:.4f}")
-      
-      # Regular sampling
       next_token = torch.multinomial(probs, 1)
       
       generated.append(next_token.item())
       context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
     
-    # Convert indices back to text using BPE tokenizer
     return tokenizer.decode(generated)
 
 if __name__ == "__main__":
