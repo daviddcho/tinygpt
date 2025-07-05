@@ -17,27 +17,15 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(42)
 
 N_EPOCHS = 5000
-
-"""
-D_MODEL = 768
-N_HEADS = 12
-N_LAYERS = 10
-D_FF = 2048
-MAX_SEQ_LEN = 512
-BS = 8
-"""
-
-# SMOL
-D_MODEL = 256 # embedding
-N_HEADS = 4
-N_LAYERS = 4
-D_FF = 512
-MAX_SEQ_LEN = 128
-
-BS = 12
 MAX_LR = 1e-4
 MIN_LR = MAX_LR * 0.1
 WARMUP_STEPS = 500
+
+from config.tiny import cfg
+import sys 
+if len(sys.argv) > 1:
+  exec(open(f"config/{sys.argv[1]}.py").read())
+globals().update(vars(cfg))
 
 device = torch.device(
   'cuda' if torch.cuda.is_available() else 
@@ -126,8 +114,8 @@ def train_model():
         val_loss = criterion(val_logits.view(-1, val_logits.size(-1)), Y_test.view(-1))
         val_acc = calculate_accuracy(val_logits, Y_test)
         
-        print(f"\nIter {iter_num}: Train Loss: {loss.item():.4f}, Train Acc: {train_acc:.4f}")
-        print(f"Val Loss: {val_loss.item():.4f}, Val Acc: {val_acc:.4f}")
+        print(f"\niter: {iter_num}, val loss: {val_loss.item():.4f}, val acc: {val_acc:.4f}")
+        run.log({'val_acc': val_acc, 'val_loss': val_loss})
         
         sample_text = generate_sample(model, dataset.vocab_size, device, length=100)
         print(f"Sample: {sample_text}")
@@ -174,6 +162,10 @@ if __name__ == "__main__":
   print("Starting transformer training...")
   model, dataset = train_model()
   
+  try:
+    os.mkdir('weights')
+  except FileExistsError:
+    pass
   torch.save({
     'model_state_dict': model.state_dict(),
     'vocab_size': dataset.vocab_size,
