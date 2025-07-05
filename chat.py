@@ -6,7 +6,7 @@ from model import Transformer
 
 tokenizer = tiktoken.get_encoding("gpt2")
 
-def chat(model_path, max_length=200, temperature=0.5):
+def chat(model_path):
   device = torch.device(
     'cuda' if torch.cuda.is_available() else 
     'mps' if torch.mps.is_available() else 
@@ -52,7 +52,7 @@ def chat(model_path, max_length=200, temperature=0.5):
       x = tokenizer.encode(user_input)[0]
       context = torch.tensor([[x]], dtype=torch.long).to(device)
       
-      generated_text = generate_text(model, context, max_length, temperature)
+      generated_text = generate_text(model, context)
       print(f"Bot: {generated_text}")
       
     except Exception as e:
