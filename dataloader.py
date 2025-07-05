@@ -13,15 +13,14 @@ class TinyShakespeare:
 
   def get_batch(self, split, batch_size):
     if split == 'train':
-      data = np.memmap('data/train.bin')
+      data = np.memmap('data/train.bin', dtype=np.int64)
     else:
-      data = np.memmap('data/val.bin')
+      data = np.memmap('data/val.bin', dtype=np.int64)
 
     #block_size = MAX_SEQ_LEN
     ix = torch.randint(len(data) - self.block_size, (batch_size,))
     x = torch.stack([torch.from_numpy((data[i:i+self.block_size]).astype(np.int64)) for i in ix]).long()
     y = torch.stack([torch.from_numpy((data[i+1:i+1+self.block_size]).astype(np.int64)) for i in ix]).long()
-
     return x, y
 
 # TODO: use bpe
