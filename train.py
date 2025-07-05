@@ -157,6 +157,7 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       
       # Regular sampling
       next_token = torch.multinomial(probs, 1)
+      print(f"Generated token: {next_token.item()}, decoded: '{tokenizer.decode([next_token.item()])}'")
       
       generated.append(next_token.item())
       context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
@@ -165,7 +166,7 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
     return tokenizer.decode(generated)
 
 if __name__ == "__main__":
-  print("Starting transformer training on enwik8...")
+  print("Starting transformer training...")
   model, dataset = train_model()
   
   torch.save({
