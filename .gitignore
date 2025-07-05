@@ -2,3 +2,4 @@ __pycache__
 transformer_enwik8*.pth
 *.swp
 wandb
+notes

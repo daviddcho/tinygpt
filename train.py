@@ -5,18 +5,38 @@ import torch.nn.functional as F
 import numpy as np
 import wandb
 from model import Transformer
-from dataloader import EnWik8Dataset
+from dataloader import EnWik8Dataset, TinyShakespeare
+import tiktoken
 from tqdm import trange
 import os
 
-N_EPOCHS = 50000
+N_EPOCHS = 5000
 D_MODEL = 768
 N_HEADS = 12
 N_LAYERS = 10
 D_FF = 2048
 MAX_SEQ_LEN = 512
 BS = 8
-LR = 3e-4
+"""
+
+#SMOL
+D_MODEL = 128 # embedding
+N_HEADS = 4
+N_LAYERS = 4
+D_FF = 512
+MAX_SEQ_LEN = 64
+
+BS = 12
+#LR = 3e-4
+"""
+LR = 1e-3
+
+device = torch.device(
+  'cuda' if torch.cuda.is_available() else 
+  'mps' if torch.backends.mps.is_available() else 
+  'cpu'
+)
+print(f"Using device: {device}")
 
 def train_model():
   run = wandb.init(entity='davidcho', project='llm-wiki', config={
@@ -28,15 +48,9 @@ def train_model():
     "bs": BS,
     "learning_rate": LR,
   })
-  device = torch.device('cuda' if torch.cuda.is_available() else 
-              'mps' if torch.backends.mps.is_available() else 
-              'cpu')
-  print(f"Using device: {device}")
   
-  # Load dataset
-  dataset = EnWik8Dataset('data/enwik8.zip', seq_len=MAX_SEQ_LEN)
+  dataset = TinyShakespeare(MAX_SEQ_LEN)
   
-  # Initialize model
   model = Transformer(
     vocab_size=dataset.vocab_size,
     d_model=D_MODEL,
@@ -46,44 +60,39 @@ def train_model():
     max_seq_len=MAX_SEQ_LEN
   ).to(device)
   
-  # Training setup
   optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.1)
   criterion = nn.CrossEntropyLoss()
   
-  # Training parameters
   eval_interval = 500
   batch_size = BS
   
-  # Training loop
   model.train()
   for iter_num in trange(N_EPOCHS, desc="Training"):
-    # Get batch
     X_train, Y_train = dataset.get_batch('train', batch_size)
     X_train, Y_train = X_train.to(device), Y_train.to(device)
     
-    # Forward pass
+    # forward pass
     logits = model(X_train)
     loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
     accuracy = calculate_accuracy(logits, Y_train)
     
-    # Backward pass
+    # backward pass
     optimizer.zero_grad()
     loss.backward()
     run.log({'accuracy': accuracy, 'loss': loss.item()})
     
-    # Gradient clipping
+    # gradient clipping
     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     
     optimizer.step()
     
-    # Evaluation
+    # eval
     if iter_num % eval_interval == 0:
       model.eval()
       with torch.no_grad():
-        # Training accuracy
         train_acc = calculate_accuracy(logits, Y_train)
         
-        # Validation loss and accuracy
+        # validation loss and accuracy
         X_test, Y_test = dataset.get_batch('test', batch_size)
         X_test, Y_test = X_test.to(device), Y_test.to(device)
         
@@ -94,9 +103,8 @@ def train_model():
         print(f"\nIter {iter_num}: Train Loss: {loss.item():.4f}, Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss.item():.4f}, Val Acc: {val_acc:.4f}")
         
-        # Generate sample text
-        sample_text = generate_sample(model, dataset, device, length=100)
-        print(f"Sample: {sample_text[:50]}...")
+        sample_text = generate_sample(model, dataset.vocab_size, device, length=100)
+        print(f"Sample: {sample_text}")
         
       model.train()
   
@@ -107,11 +115,13 @@ def calculate_accuracy(logits, targets):
   correct = (predictions == targets).float()
   return correct.mean().item()
 
-def generate_sample(model, dataset, device, length=100, temperature=0.8):
+def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
   model.eval()
+  tokenizer = tiktoken.get_encoding("gpt2")
   with torch.no_grad():
-    # Start with a random character
-    context = torch.randint(0, dataset.vocab_size, (1, 1)).to(device)
+    # Start with a random token
+    context = torch.randint(0, vocab_size, (1, 1)).to(device)
+    print(f"context: {tokenizer.decode([context.item()])}")
     
     generated = []
     for _ in range(length):
@@ -132,8 +142,8 @@ def generate_sample(model, dataset, device, length=100, temperature=0.8):
       generated.append(next_token.item())
       context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
     
-    # Convert indices back to characters
-    return ''.join([dataset.idx_to_char[idx] for idx in generated])
+    # Convert indices back to text using BPE tokenizer
+    return tokenizer.decode(generated)
 
 if __name__ == "__main__":
   print("Starting transformer training on enwik8...")
@@ -142,8 +152,6 @@ if __name__ == "__main__":
   torch.save({
     'model_state_dict': model.state_dict(),
     'vocab_size': dataset.vocab_size,
-    'char_to_idx': dataset.char_to_idx,
-    'idx_to_char': dataset.idx_to_char
   }, 'weights/transformer_enwik8.pth')
   
   print("Training completed! Model saved as 'transformer_enwik8.pth'")
