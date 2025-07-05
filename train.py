@@ -145,9 +145,6 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       logits = model(context)
       logits = logits[0, -1, :]
       
-      #print(logits.min(), logits.max(), logits.mean())
-      #print(logits[0], logits[1], logits[2])
-      
       # Sample from the distribution
       probs = F.softmax(logits / temperature, dim=-1)
       
