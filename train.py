@@ -9,6 +9,7 @@ from dataloader import EnWik8Dataset, TinyShakespeare
 import tiktoken
 from tqdm import trange
 import os
+import math
 
 N_EPOCHS = 5000
 D_MODEL = 768
@@ -29,7 +30,9 @@ MAX_SEQ_LEN = 64
 BS = 12
 #LR = 3e-4
 """
-LR = 1e-3
+MAX_LR = 1e-3
+MIN_LR = MAX_LR * 0.1
+WARMUP_STEPS = 200
 
 device = torch.device(
   'cuda' if torch.cuda.is_available() else 
@@ -46,7 +49,7 @@ def train_model():
     "d_ff": D_FF,
     "max_seq_len": MAX_SEQ_LEN,
     "bs": BS,
-    "learning_rate": LR,
+    "max_lr": MAX_LR,
   })
   
   dataset = TinyShakespeare(MAX_SEQ_LEN)
@@ -60,18 +63,32 @@ def train_model():
     max_seq_len=MAX_SEQ_LEN
   ).to(device)
   
-  optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.1)
+  optimizer = torch.optim.AdamW(model.parameters(), lr=MAX_LR, weight_decay=0.1)
   criterion = nn.CrossEntropyLoss()
   
   eval_interval = 500
   batch_size = BS
   
+  def get_lr(iter_num):
+    # linear warmup
+    if iter_num < WARMUP_STEPS:
+      return MAX_LR * iter_num / WARMUP_STEPS
+    # cosine decay
+    if iter_num > N_EPOCHS:
+      return MIN_LR
+    decay_ratio = (iter_num - WARMUP_STEPS) / (N_EPOCHS - WARMUP_STEPS)
+    cosine_decay = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
+    return MIN_LR + (MAX_LR - MIN_LR) * cosine_decay
+
   model.train()
   for iter_num in trange(N_EPOCHS, desc="Training"):
     X_train, Y_train = dataset.get_batch('train', batch_size)
     X_train, Y_train = X_train.to(device), Y_train.to(device)
     
-    # forward pass
+    lr = get_lr(iter_num)
+    for param_group in optimizer.param_groups:
+      param_group['lr'] = lr
+    
     logits = model(X_train)
     loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
     accuracy = calculate_accuracy(logits, Y_train)
@@ -79,7 +96,7 @@ def train_model():
     # backward pass
     optimizer.zero_grad()
     loss.backward()
-    run.log({'accuracy': accuracy, 'loss': loss.item()})
+    run.log({'accuracy': accuracy, 'loss': loss.item(), 'lr': lr})
     
     # gradient clipping
     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -92,7 +109,6 @@ def train_model():
       with torch.no_grad():
         train_acc = calculate_accuracy(logits, Y_train)
         
-        # validation loss and accuracy
         X_test, Y_test = dataset.get_batch('test', batch_size)
         X_test, Y_test = X_test.to(device), Y_test.to(device)
         
