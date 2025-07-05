@@ -52,7 +52,7 @@ class FeedForward(nn.Module):
     super().__init__()
     self.linear1 = nn.Linear(d_model, d_ff)
     self.linear2 = nn.Linear(d_ff, d_model)
-    self.dropout = nn.Dropout(0.1)
+    self.dropout = nn.Dropout(0.2)
     
   def forward(self, x):
     return self.linear2(self.dropout(F.relu(self.linear1(x))))
@@ -64,7 +64,7 @@ class TransformerBlock(nn.Module):
     self.feed_forward = FeedForward(d_model, d_ff)
     self.norm1 = nn.LayerNorm(d_model)
     self.norm2 = nn.LayerNorm(d_model)
-    self.dropout = nn.Dropout(0.1)
+    self.dropout = nn.Dropout(0.2)
     
   def forward(self, x, mask=None):
     # Self-attention with residual connection
@@ -103,6 +103,7 @@ class Transformer(nn.Module):
     self.max_seq_len = max_seq_len
     
     self.embedding = nn.Embedding(vocab_size, d_model)
+    nn.init.normal_(self.embedding.weight, mean=0.0, std=0.02)
     self.pos_encoding = PositionalEncoding(d_model, max_seq_len)
     
     self.transformer_blocks = nn.ModuleList([
@@ -112,7 +113,7 @@ class Transformer(nn.Module):
     self.ln_f = nn.LayerNorm(d_model)
     self.head = nn.Linear(d_model, vocab_size, bias=False)
     
-    self.dropout = nn.Dropout(0.1)
+    self.dropout = nn.Dropout(0.2)
     
     # Parameter count: ~10M
     print(f"Model parameters: {sum(p.numel() for p in self.parameters()):,}")

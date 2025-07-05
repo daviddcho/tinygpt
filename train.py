@@ -11,7 +11,14 @@ from tqdm import trange
 import os
 import math
 
+torch.manual_seed(42)
+np.random.seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+
 N_EPOCHS = 5000
+
+"""
 D_MODEL = 768
 N_HEADS = 12
 N_LAYERS = 10
@@ -20,17 +27,15 @@ MAX_SEQ_LEN = 512
 BS = 8
 """
 
-#SMOL
-D_MODEL = 128 # embedding
+# SMOL
+D_MODEL = 256 # embedding
 N_HEADS = 4
 N_LAYERS = 4
 D_FF = 512
-MAX_SEQ_LEN = 64
+MAX_SEQ_LEN = 128
 
 BS = 12
-#LR = 3e-4
-"""
-MAX_LR = 1e-3
+MAX_LR = 5e-5
 MIN_LR = MAX_LR * 0.1
 WARMUP_STEPS = 200
 
@@ -64,7 +69,7 @@ def train_model():
   ).to(device)
   
   optimizer = torch.optim.AdamW(model.parameters(), lr=MAX_LR, weight_decay=0.1)
-  criterion = nn.CrossEntropyLoss()
+  criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
   
   eval_interval = 500
   batch_size = BS
@@ -90,10 +95,15 @@ def train_model():
       param_group['lr'] = lr
     
     logits = model(X_train)
-    loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1))
+
+    # entropy regularization
+    probs = torch.softmax(logits, dim=-1)
+    entropy = - (probs * torch.log(probs + 1e-8)).sum(dim=-1).mean()
+
+    loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1)) + 0.01 * entropy
     accuracy = calculate_accuracy(logits, Y_train)
+    print("acc", accuracy)
     
-    # backward pass
     optimizer.zero_grad()
     loss.backward()
     run.log({'accuracy': accuracy, 'loss': loss.item(), 'lr': lr})
@@ -119,6 +129,14 @@ def train_model():
         print(f"\nIter {iter_num}: Train Loss: {loss.item():.4f}, Train Acc: {train_acc:.4f}")
         print(f"Val Loss: {val_loss.item():.4f}, Val Acc: {val_acc:.4f}")
         
+        # Debug model weights
+        print(f"Model vocab_size: {model.vocab_size}")
+        print(f"Embedding weight shape: {model.embedding.weight.shape}")
+        print(f"Embedding weight stats: mean={model.embedding.weight.mean():.3f}, std={model.embedding.weight.std():.3f}")
+        print(f"Output layer has bias: {model.head.bias is not None}")
+        if model.head.bias is not None:
+          print(f"Output bias for token 0: {model.head.bias[0].item():.3f}")
+        
         sample_text = generate_sample(model, dataset.vocab_size, device, length=100)
         print(f"Sample: {sample_text}")
         
@@ -129,6 +147,8 @@ def train_model():
 def calculate_accuracy(logits, targets):
   predictions = torch.argmax(logits, dim=-1)
   correct = (predictions == targets).float()
+  print("preds", predictions)
+  print("target", targets)
   return correct.mean().item()
 
 def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
@@ -147,17 +167,23 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       logits = model(context)
       logits = logits[0, -1, :]
       
+      # Debug logits before softmax
+      print(f"Raw logits stats: min={logits.min():.2f}, max={logits.max():.2f}, mean={logits.mean():.2f}")
+      print(f"Logit[0] (!) = {logits[0]:.2f}, Logit[1] = {logits[1]:.2f}, Logit[2] = {logits[2]:.2f}")
+      
       # Sample from the distribution
       probs = F.softmax(logits / temperature, dim=-1)
-      # Top-k sampling 
-      # top_k = 10
-      # top_probs, top_indices = torch.topk(probs, top_k)
-      # top_probs = top_probs / top_probs.sum()
-      # next_token = top_indices[torch.multinomial(top_probs, 1)]
+      
+      # Check if softmax is saturated
+      sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+      print("Top 3 predictions:")
+      for i in range(3):
+        token = sorted_indices[i].item()
+        prob = sorted_probs[i].item()
+        print(f"  {repr(tokenizer.decode([token]))}: {prob:.4f}")
       
       # Regular sampling
       next_token = torch.multinomial(probs, 1)
-      print(f"Generated token: {next_token.item()}, decoded: '{tokenizer.decode([next_token.item()])}'")
       
       generated.append(next_token.item())
       context = torch.cat([context, next_token.unsqueeze(0)], dim=1)
