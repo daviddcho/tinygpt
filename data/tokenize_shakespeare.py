@@ -23,5 +23,6 @@ print(f"val has {len(val_ids):,} tokens")
 # save as binary files
 train_ids = np.array(train_ids, dtype=np.int64)
 val_ids = np.array(val_ids, dtype=np.int64)
+
 train_ids.tofile(os.path.join(os.path.dirname(__file__), 'train.bin'))
 val_ids.tofile(os.path.join(os.path.dirname(__file__), 'val.bin'))

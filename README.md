@@ -1,6 +1,12 @@
 # tinygpt
-Usage 
+
+Training a transformer on a tiny shakespeare dataset.
+
+## Usage 
 ```
+# tokenize with gpt2 BPE
+./data/tokenize_shakespeare.py
+
 # To train tiny model (27M) 
 caffeinate ./train.py tiny
 
@@ -8,12 +14,9 @@ caffeinate ./train.py tiny
 caffeinate ./train.py small
 ```
 
-TODO: 
-* Add mixed precision training https://arxiv.org/abs/1710.03740
-* Improve coherence with SentencePiece or BPE for tokenization
-* Finetune with RLHF https://arxiv.org/pdf/2203.02155
+Trained a 124M transformer on 301K tokens (50k vocab size) for 10k steps on a RTX 4090. Implemented linear learning rate warmup with cosine decay, entropy regularization, and gradient clipping.
 
-Sample output from small model:
+Generated sample from our 124M model:
 ```
 William serve this gentleman,
 For what you know your father's house.
@@ -34,3 +37,8 @@ Thou hast thou to beat Aumerle plants with eager cry thee;
 What'st order ta'Anon desires access to get aboard!
 What is Caius Marcius,
 ```
+
+TODO:
+* Add mixed precision training https://arxiv.org/abs/1710.03740
+* Improve coherence with SentencePiece or BPE for tokenization
+* Finetune with RLHF https://arxiv.org/pdf/2203.02155

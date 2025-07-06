@@ -77,7 +77,6 @@ def train_model(run):
     # entropy regularization
     probs = torch.softmax(logits, dim=-1)
     entropy = - (probs * torch.log(probs + 1e-8)).sum(dim=-1).mean()
-
     loss = criterion(logits.view(-1, logits.size(-1)), Y_train.view(-1)) + 0.01 * entropy
     accuracy = calculate_accuracy(logits, Y_train)
     
@@ -123,7 +122,6 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
   model.eval()
   tokenizer = tiktoken.get_encoding("gpt2")
   with torch.no_grad():
-    # Start with a random token
     context = torch.randint(0, vocab_size, (1, 1)).to(device)
     print(f"context: {tokenizer.decode([context.item()])}")
     
@@ -135,9 +133,8 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
       logits = model(context)
       logits = logits[0, -1, :]
       
-      # Sample from the distribution
+      # sample from distribution
       probs = F.softmax(logits / temperature, dim=-1)
-      
       next_token = torch.multinomial(probs, 1)
       
       generated.append(next_token.item())

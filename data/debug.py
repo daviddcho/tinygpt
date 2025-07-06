@@ -4,6 +4,7 @@ import numpy as np
 
 tokenizer = tiktoken.get_encoding('gpt2')
 data = np.memmap('train.bin', dtype=np.int64)
+print(len(data))
 count = np.bincount(data)
 
 #x = tokenizer.encode('!')[0]
