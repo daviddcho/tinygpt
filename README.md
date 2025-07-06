@@ -1,11 +1,21 @@
-caffeinate ./train.py
+# tinygpt
+Usage 
+```
+# To train tiny model (27M) 
+caffeinate ./train.py tiny
+
+# train small model (124M)
+caffeinate ./train.py small
+```
 
 TODO: 
 * Add mixed precision training https://arxiv.org/abs/1710.03740
 * Improve coherence with SentencePiece or BPE for tokenization
 * Finetune with RLHF https://arxiv.org/pdf/2203.02155
 
-william serve this gentleman,
+Sample output from small model:
+```
+William serve this gentleman,
 For what you know your father's house.
 I'll tell me.
 The same ancient feast, and there'st on the prince my young prince,
@@ -23,3 +33,4 @@ What'st thou shalt thou diadem upon my father'st thou not that is Dee;
 Thou hast thou to beat Aumerle plants with eager cry thee;
 What'st order ta'Anon desires access to get aboard!
 What is Caius Marcius,
+```
