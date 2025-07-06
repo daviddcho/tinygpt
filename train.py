@@ -5,16 +5,16 @@ import torch.nn.functional as F
 import numpy as np
 import wandb
 from model import Transformer
-from dataloader import EnWik8Dataset, TinyShakespeare
+from dataloader import TinyShakespeare
 import tiktoken
 from tqdm import trange
 import os
 import math
 
-torch.manual_seed(42)
-np.random.seed(42)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(42)
+#torch.manual_seed(42)
+#np.random.seed(42)
+#if torch.cuda.is_available():
+#    torch.cuda.manual_seed(42)
 
 N_EPOCHS = 5000
 MAX_LR = 1e-4
@@ -34,17 +34,7 @@ device = torch.device(
 )
 print(f"Using device: {device}")
 
-def train_model():
-  run = wandb.init(entity='davidcho', project='llm-wiki', config={
-    "d_model": D_MODEL,
-    "n_heads": N_HEADS,
-    "n_layers": N_LAYERS,
-    "d_ff": D_FF,
-    "max_seq_len": MAX_SEQ_LEN,
-    "bs": BS,
-    "max_lr": MAX_LR,
-  })
-  
+def train_model(run):
   dataset = TinyShakespeare(MAX_SEQ_LEN)
   
   model = Transformer(
@@ -157,7 +147,17 @@ def generate_sample(model, vocab_size, device, length=100, temperature=0.3):
 
 if __name__ == "__main__":
   print("Starting transformer training...")
-  model, dataset = train_model()
+  run = wandb.init(entity='davidcho', project='llm-wiki', config={
+    "d_model": D_MODEL,
+    "n_heads": N_HEADS,
+    "n_layers": N_LAYERS,
+    "d_ff": D_FF,
+    "max_seq_len": MAX_SEQ_LEN,
+    "bs": BS,
+    "max_lr": MAX_LR,
+  })
+
+  model, dataset = train_model(run)
   
   try:
     os.mkdir('weights')
@@ -166,6 +166,6 @@ if __name__ == "__main__":
   torch.save({
     'model_state_dict': model.state_dict(),
     'vocab_size': dataset.vocab_size,
-  }, 'weights/transformer_enwik8.pth')
+  }, f"weights/model-{run.name}.pth")
   
-  print("Training completed! Model saved as 'transformer_enwik8.pth'")
+  print(f"Training completed! Model saved as weights/model-{run.name}.pth")
