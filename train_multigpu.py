@@ -21,6 +21,7 @@ from config.tiny import cfg
 import sys 
 if len(sys.argv) > 1:
   exec(open(f"config/{sys.argv[1]}.py").read())
+  print("loaded sys.argv[1]")
 globals().update(vars(cfg))
 
 
