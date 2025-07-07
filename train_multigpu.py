@@ -7,7 +7,7 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
 from model import Transformer
-from dataloader import TinyShakespeare
+from dataloader import OpenWebText
 from tqdm import trange
 import os
 import math
@@ -41,7 +41,7 @@ def train(rank, world_size):
     device = torch.device('cpu')
   print(f"Using device: {device}\n")
 
-  dataset = TinyShakespeare(MAX_SEQ_LEN)
+  dataset = OpenWebText(MAX_SEQ_LEN)
   
   model = Transformer(
     vocab_size=dataset.vocab_size,
