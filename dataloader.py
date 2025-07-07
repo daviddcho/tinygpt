@@ -2,6 +2,27 @@ import torch
 import numpy as np
 import zipfile
 
+class OpenWebText:
+  def __init__(self, block_size):
+    self.block_size = block_size
+
+    train_data = np.memmap('data/train.bin', dtype=np.uint16)
+    val_data = np.memmap('data/val.bin', dtype=np.uint16)
+    self.vocab_size = max(train_data.max(), val_data.max()) + 1
+    print(f"vocab size: {self.vocab_size}")
+
+  def get_batch(self, split, batch_size):
+    if split == 'train':
+      data = np.memmap('data/train.bin', dtype=np.uint16)
+    else:
+      data = np.memmap('data/val.bin', dtype=np.uint16)
+
+    #block_size = MAX_SEQ_LEN
+    ix = torch.randint(len(data) - self.block_size, (batch_size,))
+    x = torch.stack([torch.from_numpy((data[i:i+self.block_size]).astype(np.uint16)) for i in ix]).long()
+    y = torch.stack([torch.from_numpy((data[i+1:i+1+self.block_size]).astype(np.uint16)) for i in ix]).long()
+    return x, y
+
 class TinyShakespeare:
   def __init__(self, block_size):
     self.block_size = block_size
