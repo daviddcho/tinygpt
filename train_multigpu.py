@@ -12,7 +12,7 @@ from tqdm import trange
 import os
 import math
 
-N_EPOCHS = 5
+N_EPOCHS = 5000
 MAX_LR = 1e-4
 MIN_LR = MAX_LR * 0.1
 WARMUP_STEPS = 500
@@ -59,7 +59,7 @@ def train(rank, world_size):
   optimizer = torch.optim.AdamW(model.parameters(), lr=MAX_LR, weight_decay=0.1)
   criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
   
-  eval_interval = 2
+  eval_interval = 200
   batch_size = BS
   
   def get_lr(iter_num):
