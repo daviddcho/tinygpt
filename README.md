@@ -45,5 +45,5 @@ TODO:
 
 Train multi-gpu
 ```
-torchrun --nproc_per_node=2 ddp.py
+torchrun --nproc_per_node=4 ddp.py
 ```
