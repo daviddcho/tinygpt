@@ -4,7 +4,7 @@ Training a transformer on a tiny shakespeare dataset.
 
 ## Usage 
 ```
-# tokenize with gpt2 BPE
+# create train and val dataset with gpt2 BPE
 ./data/tokenize_shakespeare.py
 
 # To train tiny model (27M) 
@@ -42,3 +42,8 @@ TODO:
 * Add mixed precision training https://arxiv.org/abs/1710.03740
 * Improve coherence with SentencePiece or BPE for tokenization
 * Finetune with RLHF https://arxiv.org/pdf/2203.02155
+
+Train multi-gpu
+```
+torchrun --nproc_per_node=2 ddp.py
+```
