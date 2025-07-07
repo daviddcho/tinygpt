@@ -7,5 +7,5 @@ cfg = SimpleNamespace(
   N_LAYERS = 10,
   D_FF = 3072,
   MAX_SEQ_LEN = 1024,
-  BS = 32, # 8 per gpu
+  BS = 8, 
 )
