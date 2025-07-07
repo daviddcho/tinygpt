@@ -12,7 +12,7 @@ from tqdm import trange
 import os
 import math
 
-N_EPOCHS = 5
+N_EPOCHS = 5000
 MAX_LR = 1e-4
 MIN_LR = MAX_LR * 0.1
 WARMUP_STEPS = 500
@@ -23,20 +23,22 @@ if len(sys.argv) > 1:
   exec(open(f"config/{sys.argv[1]}.py").read())
 globals().update(vars(cfg))
 
-device = torch.device(
-  'cuda' if torch.cuda.is_available() else 
-  'cpu'
-)
-print(f"Using device: {device}\n")
 
 def train(rank, world_size):
   print(f"starting... {rank}")
   dist.init_process_group(
-    backend="gloo",
+    backend="nccl" if torch.cuda.is_available() else 'gloo',
     init_method=f"tcp://{os.environ['MASTER_ADDR']}:{os.environ['MASTER_PORT']}",
     rank=rank,
     world_size=world_size,
   )
+
+  if torch.cuda.is_available():
+    device = torch.device(f"cuda:{local_rank}")
+    torch.cuda.set_device(device)
+  else: 
+    device = torch.device('cpu')
+  print(f"Using device: {device}\n")
 
   dataset = TinyShakespeare(MAX_SEQ_LEN)
   
@@ -48,7 +50,10 @@ def train(rank, world_size):
     d_ff=D_FF,
     max_seq_len=MAX_SEQ_LEN
   ).to(device)
-  model = DDP(model)
+  if torch.cuda.is_available():
+    model = DDP(model, device_ids=[local_rank])
+  else:
+    model = DDP(model)
   
   optimizer = torch.optim.AdamW(model.parameters(), lr=MAX_LR, weight_decay=0.1)
   criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
