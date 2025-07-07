@@ -12,7 +12,7 @@ from tqdm import trange
 import os
 import math
 
-N_EPOCHS = 5000
+N_EPOCHS = 5
 MAX_LR = 1e-4
 MIN_LR = MAX_LR * 0.1
 WARMUP_STEPS = 500
@@ -59,7 +59,7 @@ def train(rank, world_size):
   optimizer = torch.optim.AdamW(model.parameters(), lr=MAX_LR, weight_decay=0.1)
   criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
   
-  eval_interval = 500
+  eval_interval = 2
   batch_size = BS
   
   def get_lr(iter_num):
@@ -121,6 +121,14 @@ def train(rank, world_size):
         if dist.get_rank() == 0:
           print(f"\niter: {iter_num}, val loss: {val_loss.item():.4f}, val acc: {val_acc:.4f}")
           wandb.log({'val_acc': val_acc, 'val_loss': val_loss})
+          os.makedirs('weights', exist_ok=True)
+          print("saving checkpoint")
+          torch.save({
+            'model_state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'vocab_size': dataset.vocab_size,
+            'iter_num': iter_num,
+          }, f"weights/ckpt.pt")
       model.train()
 
   dist.barrier()
