@@ -46,4 +46,5 @@ TODO:
 Train multi-gpu
 ```
 torchrun --nproc_per_node=4 ddp.py
+python3 -m torch.distributed.run --nproc_per_node=4 train_multigpu.py
 ```
