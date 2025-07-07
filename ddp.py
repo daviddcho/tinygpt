@@ -22,15 +22,9 @@ class ToyModel(nn.Module):
     return self.net2(self.relu(self.net1(x)))
 
 def setup(rank, world_size):
-  #os.environ['MASTER_ADDR'] = 'localhost'
-  #os.environ['MASTER_PORT'] = '12355'
-  #dist.init_process_group("gloo", rank=rank, world_size=world_size)
-
-  tmp = pathlib.Path(tempfile.gettempdir()) / "ddp_example"
-  init_method = f"file://{tmp.as_posix()}"
   dist.init_process_group(
     backend="gloo",
-    init_method=init_method,
+    init_method=f"tcp://{os.environ['MASTER_ADDR']}:{os.environ['MASTER_PORT']}",
     rank=rank,
     world_size=world_size,
   )
@@ -52,16 +46,16 @@ def train(rank, world_size):
   optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
 
   n_steps = 100
-  #progress_bar = trange(n_steps) if rank == 0 else range(n_steps) 
+  progress_bar = trange(n_steps) if rank == 0 else range(n_steps) 
 
-  for i in range(n_steps):
-    print(i)
+  for i in progress_bar:
     optimizer.zero_grad()
     out = ddp_model(torch.randn(20, 10)).to(device)
     targets = torch.randn(20, 5).to(device)
     loss_fn(out, targets).backward()
     optimizer.step()
-
+  
+  print("cleaning up")
   cleanup()
   print("finished running DDP on rank", rank)
 
